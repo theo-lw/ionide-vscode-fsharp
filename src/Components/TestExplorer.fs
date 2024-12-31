@@ -1637,8 +1637,11 @@ module Interactions =
 
                     let! listDiscoveredPerProject =
                         listDiscoveryProjects
-                        |> ListExt.mapKeepInputAsync discoverTestsByListOnly
-                        |> Promise.all
+                        |> Promise.executeWithMaxParallel maxParallelTestProjects (fun project ->
+                            promise {
+                                let! tests = discoverTestsByListOnly project
+                                return project, tests
+                            })
 
                     trxDiscoveryProjects
                     |> List.iter (ProjectPath.fromProject >> makeTrxPath >> Path.deleteIfExists)

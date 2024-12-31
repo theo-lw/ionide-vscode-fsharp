@@ -352,22 +352,27 @@ module Promise =
         executeForAll withIndex items
 
     let executeWithMaxParallel maxParallelCount (f: 'a -> JS.Promise<'b>) (items: 'a list) =
-        let items = items |> Array.ofList
-        let initial = items |> Array.safeTake maxParallelCount
+        if maxParallelCount <= 0 then
+            raise (ArgumentException($"maxParallelCount must be at least 1 %d{maxParallelCount}"))
+        else
+            let output = Array.zeroCreate (List.length items)
 
-        let mutable remaining =
-            Collections.Generic.Queue(collection = (items |> Array.safeSkip maxParallelCount))
+            let remaining =
+                Collections.Generic.Queue(collection = (items |> List.mapi (fun idx elem -> idx, elem)))
 
-        let rec startNext promise =
-            promise
-            |> Promise.bind (fun _ ->
-                if remaining.Count = 0 then
-                    promise
-                else
-                    let next: 'a = remaining.Dequeue()
-                    startNext (f next))
+            let worker () =
+                promise {
+                    while not (remaining.Count = 0) do
+                        let idx, elem = remaining.Dequeue()
+                        let! result = f elem
+                        Array.set output idx result
+                }
 
-        initial |> Array.map (f >> startNext) |> Promise.all
+            promise {
+                let! (_: array<unit>) = List.init maxParallelCount (fun (_: int) -> worker ()) |> Promise.all
+                return output
+            }
+
 
 module Event =
 
