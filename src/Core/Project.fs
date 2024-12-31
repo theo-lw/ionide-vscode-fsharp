@@ -58,6 +58,9 @@ module Project =
 
     let deepLevel = "FSharp.workspaceModePeekDeepLevel" |> Configuration.get 2 |> max 0
 
+    let loadAllProjectsIfNoneSelected =
+        "FSharp.loadAllProjectsIfNoneSelected" |> Configuration.get true
+
     let isNetCoreApp (project: Project) =
         project.Info.TargetFramework :: project.Info.TargetFrameworks
         |> Seq.exists (fun tfm -> tfm = "net5.0" || tfm.StartsWith "netcoreapp")
@@ -661,11 +664,16 @@ module Project =
 
 
     let initWorkspace () =
-        getWorkspace ()
-        |> Promise.bind (function
-            | Some x -> Promise.lift x
-            | None -> getWorkspaceForModeIonideSearch ())
-        |> Promise.bind (initWorkspaceHelper)
+        promise {
+            let! workspace = getWorkspace ()
+
+            match workspace with
+            | Some workspace -> return! initWorkspaceHelper workspace
+            | None when loadAllProjectsIfNoneSelected ->
+                let! workspace = getWorkspaceForModeIonideSearch ()
+                return! initWorkspaceHelper workspace
+            | None -> return ()
+        }
 
     module internal ProjectStatus =
         let mutable timer = None

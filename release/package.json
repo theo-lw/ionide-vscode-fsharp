@@ -426,6 +426,11 @@
           "description": "The expression to fill in the right-hand side of inherited members when generating missing members for an abstract base class",
           "type": "string"
         },
+        "FSharp.loadAllProjectsIfNoneSelected": {
+          "default": true,
+          "description": "If no projects are selected, load all projects detected from .fsproj files",
+          "type": "boolean"
+        },
         "FSharp.abstractClassStubGenerationObjectIdentifier": {
           "default": "this",
           "description": "The name of the \u0027self\u0027 identifier in an inherited member. For example, \u0060this\u0060 in the expression \u0060this.Member(x: int) = ()\u0060",
